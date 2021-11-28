@@ -1,11 +1,7 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.22)
 
-project(PPcmake VERSION "1.0.0")
+project(PPcmake VERSION "1.0.1")
 
 include("PPcmake.cmake")
 
-PPcmake_init()
-
 PPcmake_install_file("PPcmake.cmake")
-
-PPcmake_cpack()
