@@ -25,8 +25,9 @@ file(MAKE_DIRECTORY "${PPCMAKE_PACKAGES_DIR}")
 #
 
 function(PPcmake__package _GIT_SERVER _USER _REPOSITORY _TAG)
+    set(_repo_dir_src "${PPCMAKE_PACKAGES_DIR}/${_REPOSITORY}")
+    
     if(NOT EXISTS "${_repo_dir_src}")
-        set(_repo_dir_src "${PPCMAKE_PACKAGES_DIR}/${_REPOSITORY}")
         set(_repo_dir_out "${_repo_dir_src}/out-cmake")
         set(_logs_dir_output "${_repo_dir_src}-logs/output")
         set(_logs_dir_errors "${_repo_dir_src}-logs/errors")
