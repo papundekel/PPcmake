@@ -25,10 +25,14 @@ file(MAKE_DIRECTORY "${PPCMAKE_PACKAGES_DIR}")
 #
 
 function(PPcmake__package _GIT_SERVER _USER _REPOSITORY _TAG)
-    set(_repo_dir_src "${PPCMAKE_PACKAGES_DIR}/${_REPOSITORY}")
-    set(_repo_dir_out "${_repo_dir_src}/out-cmake")
-
     if(NOT EXISTS "${_repo_dir_src}")
+        set(_repo_dir_src "${PPCMAKE_PACKAGES_DIR}/${_REPOSITORY}")
+        set(_repo_dir_out "${_repo_dir_src}/out-cmake")
+        set(_logs_dir_output "${_repo_dir_src}-logs/output")
+        set(_logs_dir_errors "${_repo_dir_src}-logs/errors")
+
+        file(MAKE_DIRECTORY "${_logs_dir_output}" "${_logs_dir_errors}")
+
         execute_process(
             COMMAND "${GIT_EXECUTABLE}"
                 "clone"
@@ -36,18 +40,20 @@ function(PPcmake__package _GIT_SERVER _USER _REPOSITORY _TAG)
                 "--depth" "1"
                 "https://${_GIT_SERVER}/${_USER}/${_REPOSITORY}"
                 "${_repo_dir_src}"
-            OUTPUT_FILE "${PPCMAKE_PACKAGES_DIR}/output.log"
-            ERROR_FILE "${PPCMAKE_PACKAGES_DIR}/errors.log"
+            OUTPUT_FILE "${_logs_dir_output}/clone.log"
+            ERROR_FILE "${_logs_dir_errors}/clone.log"
             COMMAND_ECHO STDOUT
+            COMMAND_ERROR_IS_FATAL ANY
         )
         execute_process(
             COMMAND "${CMAKE_COMMAND}"
                 "-S" "${_repo_dir_src}"
                 "-B" "${_repo_dir_out}"
                 "-G" "Ninja Multi-Config"
-            OUTPUT_FILE "${PPCMAKE_PACKAGES_DIR}/output.log"
-            ERROR_FILE "${PPCMAKE_PACKAGES_DIR}/errors.log"
+            OUTPUT_FILE "${_logs_dir_output}/generate.log"
+            ERROR_FILE "${_logs_dir_errors}/generate.log"
             COMMAND_ECHO STDOUT
+            COMMAND_ERROR_IS_FATAL ANY
         )
         execute_process(
             COMMAND "${CMAKE_COMMAND}"
@@ -55,18 +61,20 @@ function(PPcmake__package _GIT_SERVER _USER _REPOSITORY _TAG)
                 "--config" "Release"
                 "--target all"
                 "-j" "10"
-            OUTPUT_FILE "${PPCMAKE_PACKAGES_DIR}/output.log"
-            ERROR_FILE "${PPCMAKE_PACKAGES_DIR}/errors.log"
+            OUTPUT_FILE "${_logs_dir_output}/build.log"
+            ERROR_FILE "${_logs_dir_errors}/build.log"
             COMMAND_ECHO STDOUT
+            COMMAND_ERROR_IS_FATAL ANY
         )
         execute_process(
             COMMAND "${CMAKE_COMMAND}"
                 "--install" "${_repo_dir_out}"
                 "--config" "Release"
                 "--prefix" "${PPCMAKE_VENDORDIR}"
-            OUTPUT_FILE "${PPCMAKE_PACKAGES_DIR}/output.log"
-            ERROR_FILE "${PPCMAKE_PACKAGES_DIR}/errors.log"
+            OUTPUT_FILE "${_logs_dir_output}/install.log"
+            ERROR_FILE "${_logs_dir_errors}/install.log"
             COMMAND_ECHO STDOUT
+            COMMAND_ERROR_IS_FATAL ANY
         )
     endif()
 endfunction()
