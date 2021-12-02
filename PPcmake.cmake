@@ -24,7 +24,7 @@ file(MAKE_DIRECTORY "${PPCMAKE_PACKAGES_DIR}")
 
 #
 
-function(PPcmake_package _GIT_SERVER _USER _REPOSITORY _TAG)
+function(PPcmake__package _GIT_SERVER _USER _REPOSITORY _TAG)
     set(_repo_dir_src "${PPCMAKE_PACKAGES_DIR}/${_REPOSITORY}")
     set(_repo_dir_out "${_repo_dir_src}/out-cmake")
 
@@ -71,16 +71,22 @@ function(PPcmake_package _GIT_SERVER _USER _REPOSITORY _TAG)
     endif()
 endfunction()
 
+macro(PPcmake_package _GIT_SERVER _USER _REPOSITORY _TAG)
+    PPcmake__package("${_GIT_SERVER}" "${_USER}" "${_REPOSITORY}" "${_TAG}")
+    include("${_REPOSITORY}")
+endmacro()
+
+
 function(PPcmake_reset_notfound_var _LIST)
     if(NOT ${_LIST})
         set(${_LIST} "" PARENT_SCOPE)
     endif()
 endfunction()
 
-function(PPcmake_cpack)
-    set(CPACK_GENERATOR "TGZ" PARENT_SCOPE)
+macro(PPcmake_cpack)
+    set(CPACK_GENERATOR "TGZ")
     include(CPack)
-endfunction()
+endmacro()
 
 function(PPcmake_install_file _FILEPATH)
     if("${_FILEPATH}" MATCHES "\.cmake$")
