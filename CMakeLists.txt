@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(PPcmake VERSION "1.0.4")
+project(PPcmake VERSION "1.0.5")
 
 include("PPcmake.cmake")
 

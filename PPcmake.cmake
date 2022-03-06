@@ -9,82 +9,93 @@ endif()
 
 #
 
-set(PPCMAKE_INSTALL_CMAKEDIR "${CMAKE_INSTALL_DATADIR}/cmake")
-set(PPCMAKE_VENDORDIR "${CMAKE_SOURCE_DIR}/vendor")
-set(PPCMAKE_MODULE_PATH "${PPCMAKE_VENDORDIR}/${PPCMAKE_INSTALL_CMAKEDIR}")
-set(PPCMAKE_PACKAGES_DIR "${CMAKE_BINARY_DIR}/packages/")
+if (EXISTS "${CMAKE_SOURCE_DIR}/deps")
+    file(READ "${CMAKE_SOURCE_DIR}/deps" _deps)
+    string(REGEX REPLACE "\n" ";" _deps "${_deps}")
+endif()
 
 #
 
-set(CMAKE_MODULE_PATH "${PPCMAKE_VENDORDIR}/${PPCMAKE_INSTALL_CMAKEDIR}")
+if (NOT DEFINED ENV{PProot})
+    message(FATAL_ERROR "Variable PProot undefined, please define it first.")
+endif()
+
+set(_root_dir "$ENV{PProot}")
+set(_install_cmake_subdir "${CMAKE_INSTALL_DATADIR}/cmake")
 
 #
 
-file(MAKE_DIRECTORY "${PPCMAKE_PACKAGES_DIR}")
+function(PPcmake_execute_process _NAME _COMMAND _LOGS_OUTPUT_DIR _LOGS_ERRORS_DIR)
+    execute_process(
+        COMMAND "${_COMMAND}"
+        OUTPUT_FILE "${_LOGS_OUTPUT_DIR}/${_NAME}.log"
+        ERROR_FILE "${_LOGS_ERRORS_DIR}/${_NAME}.log"
+        COMMAND_ECHO STDOUT
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+endfunction(PPcmake_execute_process )
 
 #
 
-function(PPcmake__package _GIT_SERVER _USER _REPOSITORY _TAG)
-    set(_repo_dir_src "${PPCMAKE_PACKAGES_DIR}/${_REPOSITORY}")
+function(PPcmake_package _NAME _TAG _PATH)
+    set(_package_dir "${_root_dir}/${_NAME}/${_TAG}")
     
-    if(NOT EXISTS "${_repo_dir_src}")
-        set(_repo_dir_out "${_repo_dir_src}/out-cmake")
-        set(_logs_dir_output "${_repo_dir_src}-logs/output")
-        set(_logs_dir_errors "${_repo_dir_src}-logs/errors")
+    if(NOT EXISTS "${_package_dir}")
+        set(_source_dir "${_package_dir}/source")
+        set(_build_dir "${_package_dir}/build")
+        set(_install_dir "${_package_dir}/install")
+        set(_logs_output_dir "${_package_dir}/logs/output")
+        set(_logs_errors_dir "${_package_dir}/logs/errors")
 
-        file(MAKE_DIRECTORY "${_logs_dir_output}" "${_logs_dir_errors}")
+        file(MAKE_DIRECTORY "${_logs_output_dir}" "${_logs_errors_dir}")
 
         execute_process(
             COMMAND "${GIT_EXECUTABLE}"
                 "clone"
                 "--branch" "${_TAG}"
                 "--depth" "1"
-                "https://${_GIT_SERVER}/${_USER}/${_REPOSITORY}"
-                "${_repo_dir_src}"
-            OUTPUT_FILE "${_logs_dir_output}/clone.log"
-            ERROR_FILE "${_logs_dir_errors}/clone.log"
+                "${_PATH}"
+                "${_source_dir}"
+            OUTPUT_FILE "${_logs_output_dir}/clone.log"
+            ERROR_FILE "${_logs_errors_dir}/clone.log"
             COMMAND_ECHO STDOUT
             COMMAND_ERROR_IS_FATAL ANY
         )
         execute_process(
             COMMAND "${CMAKE_COMMAND}"
-                "-S" "${_repo_dir_src}"
-                "-B" "${_repo_dir_out}"
+                "-S" "${_source_dir}"
+                "-B" "${_build_dir}"
                 "-G" "Ninja Multi-Config"
-            OUTPUT_FILE "${_logs_dir_output}/generate.log"
-            ERROR_FILE "${_logs_dir_errors}/generate.log"
+            OUTPUT_FILE "${_logs_output_dir}/generate.log"
+            ERROR_FILE "${_logs_errors_dir}/generate.log"
             COMMAND_ECHO STDOUT
             COMMAND_ERROR_IS_FATAL ANY
         )
         execute_process(
             COMMAND "${CMAKE_COMMAND}"
-                "--build" "${_repo_dir_out}"
+                "--build" "${_build_dir}"
                 "--config" "Release"
                 "--target all"
-                "-j" "10"
-            OUTPUT_FILE "${_logs_dir_output}/build.log"
-            ERROR_FILE "${_logs_dir_errors}/build.log"
+                "-j" "8"
+            OUTPUT_FILE "${_logs_output_dir}/build.log"
+            ERROR_FILE "${_logs_errors_dir}/build.log"
             COMMAND_ECHO STDOUT
             COMMAND_ERROR_IS_FATAL ANY
         )
         execute_process(
             COMMAND "${CMAKE_COMMAND}"
-                "--install" "${_repo_dir_out}"
+                "--install" "${_build_dir}"
                 "--config" "Release"
-                "--prefix" "${PPCMAKE_VENDORDIR}"
-            OUTPUT_FILE "${_logs_dir_output}/install.log"
-            ERROR_FILE "${_logs_dir_errors}/install.log"
+                "--prefix" "${_install_dir}"
+            OUTPUT_FILE "${_logs_output_dir}/install.log"
+            ERROR_FILE "${_logs_errors_dir}/install.log"
             COMMAND_ECHO STDOUT
             COMMAND_ERROR_IS_FATAL ANY
         )
     endif()
+
+    set(CMAKE_MODULE_PATH "${_install_dir}/${_install_cmake_subdir}" PARENT_SCOPE)
 endfunction()
-
-macro(PPcmake_package _GIT_SERVER _USER _REPOSITORY _TAG)
-    PPcmake__package("${_GIT_SERVER}" "${_USER}" "${_REPOSITORY}" "${_TAG}")
-    include("${_REPOSITORY}")
-endmacro()
-
 
 function(PPcmake_reset_notfound_var _LIST)
     if(NOT ${_LIST})
@@ -99,7 +110,7 @@ endmacro()
 
 function(PPcmake_install_file _FILEPATH)
     if("${_FILEPATH}" MATCHES "\.cmake$")
-        set(_dest "${PPCMAKE_INSTALL_CMAKEDIR}")
+        set(_dest "${_install_cmake_subdir}")
     elseif("${_FILEPATH}" MATCHES "\.format$")
         set(_dest "${CMAKE_INSTALL_SHAREDSTATEDIR}")
     endif()
@@ -120,3 +131,16 @@ macro(PPcmake_add_subdirectory _DIR)
         add_subdirectory("${_DIR}")
     endif()
 endmacro()
+
+#
+
+foreach(_dep ${_deps})
+    string(REGEX REPLACE " " ";" _dep "${_dep}")
+
+    list(POP_FRONT _dep _name)
+    list(POP_FRONT _dep _tag)
+    list(POP_FRONT _dep _path)
+
+    PPcmake_package("${_name}" "${_tag}" "${_path}")
+
+endforeach()
