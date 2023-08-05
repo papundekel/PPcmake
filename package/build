@@ -1,4 +1,4 @@
 #!/bin/sh
 
-cmake -S ./ .out-cmake/ -G "Ninja Multi-Config" && \
+cmake -S ./ -B .out-cmake/ -G "Ninja Multi-Config" && \
 cmake --build .out-cmake/ --config Release --target all -j 8
