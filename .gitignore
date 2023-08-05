@@ -1,4 +1,1 @@
-out-cmake/
-.vscode/
-devel1/
-devel2/
+.*/
