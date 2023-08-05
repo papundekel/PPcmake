@@ -10,4 +10,4 @@ on:
 
 jobs:
     Release:
-        uses: Petkr/PPactions/.github/workflows/release.yml@v1
+        uses: Petkr/PPactions/.github/workflows/release.yml@v2
