@@ -1,0 +1,13 @@
+name: Release
+
+on:
+    push:
+        tags: ["*"]
+        branches: ["main"]
+    pull_request:
+        branches: ["main"]
+    workflow_dispatch:
+
+jobs:
+    Release:
+        uses: Petkr/PPactions/.github/workflows/release.yml@v2
